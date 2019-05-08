@@ -1,0 +1,141 @@
+/**
+ *
+ * (c) 2013-2014 Wishtack
+ *
+ * $Id: 53f1581d3cf60c3007a805e3641204515b870311 $
+ */
+
+(function() {
+
+    /**
+ *
+ * (c) 2013-2014 Wishtack
+ *
+ * $Id: b13d49d657d213c661db72f2b310941ea53fa4bb $
+ */
+
+/* Load Script function we may need to load jQuery from the Google's CDN */
+/* One source: http://snipplr.com/view/18756/loadscript/ */
+
+var loadScript = function loadScript(url, callback) {
+
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+
+    /* If the browser is Internet Explorer. */
+    if (script.readyState){
+        script.onreadystatechange = function(){
+            if (script.readyState == "loaded" || script.readyState == "complete"){
+                script.onreadystatechange = null;
+                callback();
+            }
+        };
+    }
+    /* For any other browser. */
+    else {
+        script.onload = function(){
+            callback();
+        };
+    }
+
+    script.src = url;
+    document.getElementsByTagName("head")[0].appendChild(script);
+
+};
+
+var loadJQueryAndRun = function loadJQueryAndRun(callback) {
+
+    /* If jQuery has not yet been loaded or if it has but it's too old for our needs,
+     we will load jQuery from the Google CDN, and when it's fully loaded, we will run
+     our app's JavaScript. Set your own limits here, the sample's code below uses 2.1
+     as the minimum version we are ready to use, and if the jQuery is older, we load 2.1.1. */
+
+    if ((typeof jQuery === 'undefined') || (parseFloat(jQuery.fn.jquery) < 2.1)) {
+        loadScript('//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js', function () {
+            jQuery211 = jQuery.noConflict(true);
+            callback(jQuery211);
+        });
+    }
+    else {
+        callback(jQuery);
+    }
+
+};
+
+
+    var _injectAddToWishlistButton = function _injectAddToWishlistButton($) {
+
+        var addWishUrl = null;
+        var params = [];
+        var value = null;
+
+        /* Load product metas. */
+        var productMeta = {
+            'description':
+                $('meta[property="og:description"]').attr('content')
+                || $('[itemprop="description"]').text(),
+            'picture_url':
+                $('meta[property="og:image:secure_url"]').attr('content')
+                || $('meta[property="og:image"]').attr('content')
+                || $('[itemprop="image"]').attr('src'),
+            'price_amount':$('meta[property="og:price:amount"]').attr('content'),
+            'price_currency': $('meta[property="og:price:currency"]').attr('content'),
+            'price_raw': $('[itemprop="price"]').text(),
+            'site_name': $('meta[property="og:site_name"]').attr('content'),
+            'title':
+                $('meta[property="og:title"]').attr('content')
+                || $('[itemprop="name"]').text(),
+            'url': $(location).attr('href')
+        };
+
+        /* If meta is missing don't add 'add to wishlist' button. */
+        if (!productMeta['title']) {
+            return;
+        }
+
+        /* Wishtack button has already being added manually. */
+        if ($('*[onclick*="www.wishtack.com"]').length > 0) {
+            return;
+        }
+
+        /* Only keep valid values. */
+        for (var key in productMeta) {
+            value = productMeta[key];
+            if (value) {
+                /* We should use '$.param' but as it is a hashbang query string unescaping behaves differently. */
+                params.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+            }
+        };
+
+        addWishUrl = 'https://www.wishtack.com/?source=shopify-app&state=/wishes/new&' + params.join('&');
+
+        $('[action="/cart/add"] [type="submit"]').each(function (index, addToCartButton) {
+            var addToWishlistButton = null;
+            var addToWishlistButtonText = 'Add to Wishlist';
+            var spacer = $(document.createElement('span'));
+
+            spacer.css('float', $(addToCartButton).css('float'));
+            spacer.css('margin', '5px');
+
+            addToWishlistButton = $(addToCartButton).clone();
+            addToWishlistButton.attr('onclick', 'window.open("' + addWishUrl + '");return false;');
+            addToWishlistButton.attr('value', addToWishlistButtonText);
+            addToWishlistButton.text(addToWishlistButtonText);
+
+            /* Add a spacer and 'Add to Wishlist' button after 'Add to Cart' button. */
+            $(addToCartButton).after(
+                spacer,
+                addToWishlistButton
+            );
+
+        });
+
+    };
+
+    var main = function main($) {
+        _injectAddToWishlistButton($);
+    };
+
+    loadJQueryAndRun(main);
+
+})();
